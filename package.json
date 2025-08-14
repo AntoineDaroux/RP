@@ -1,12 +1,11 @@
 {
-  "name": "recherhce-peage",
+  "name": "recherche-peage",
   "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "postinstall": "npx playwright install --with-deps chromium"
+    "build": "npx playwright install --with-deps chromium && next build",
+    "start": "next start"
   },
   "dependencies": {
     "next": "14.2.5",
