@@ -2,9 +2,8 @@
 const nextConfig = {
   experimental: {
     outputFileTracingIncludes: {
-      // routes App Router
-      '/api/aliae': ['node_modules/playwright-core/.local-browsers/**'],
-      '/api/sanef': ['node_modules/playwright-core/.local-browsers/**']
+      'app/api/aliae/route': ['node_modules/playwright-core/.local-browsers/**'],
+      'app/api/sanef/route': ['node_modules/playwright-core/.local-browsers/**']
     }
   }
 };

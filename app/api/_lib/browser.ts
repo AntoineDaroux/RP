@@ -2,7 +2,7 @@ import { chromium, LaunchOptions } from "playwright";
 import fs from "fs";
 import path from "path";
 
-// Toujours privilégier les navigateurs installés dans le projet
+// Assure l'usage des navigateurs locaux au projet
 if (!process.env.PLAYWRIGHT_BROWSERS_PATH) {
   process.env.PLAYWRIGHT_BROWSERS_PATH = "0";
 }
@@ -10,24 +10,21 @@ if (!process.env.PLAYWRIGHT_BROWSERS_PATH) {
 function findExecutable(): string | undefined {
   try {
     const base = path.join(process.cwd(), "node_modules", "playwright-core", ".local-browsers");
+    if (!fs.existsSync(base)) return undefined;
+
     const entries = fs.readdirSync(base, { withFileTypes: true });
-
-    // Cherche la version la plus récente
     const latest = (prefix: string) =>
-      entries
-        .filter(e => e.isDirectory() && e.name.startsWith(prefix))
-        .map(e => e.name)
-        .sort()
-        .pop();
+      entries.filter(e => e.isDirectory() && e.name.startsWith(prefix))
+             .map(e => e.name).sort().pop();
 
-    // 1) Tente d'abord le binaire "chrome" (souvent présent)
+    // 1) chrome (chromium-xxxx/chrome-linux/chrome)
     const chromiumDir = latest("chromium-");
     if (chromiumDir) {
       const chromePath = path.join(base, chromiumDir, "chrome-linux", "chrome");
       if (fs.existsSync(chromePath)) return chromePath;
     }
 
-    // 2) Sinon, fallback vers "headless_shell"
+    // 2) headless_shell (chromium_headless_shell-xxxx/chrome-linux/headless_shell)
     const shellDir = latest("chromium_headless_shell-");
     if (shellDir) {
       const shellPath = path.join(base, shellDir, "chrome-linux", "headless_shell");
