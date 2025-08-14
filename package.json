@@ -1,6 +1,6 @@
 {
   "name": "recherhce-peage",
-  "version": "1.0.0",
+"version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -10,8 +10,8 @@
   },
   "dependencies": {
     "next": "14.2.5",
-    "playwright": "^1.46.1",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "playwright": "^1.46.1"
   }
 }
