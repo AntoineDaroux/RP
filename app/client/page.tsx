@@ -14,16 +14,10 @@ type Company = {
 
 type SearchResult =
   | { companyId: string; status: "pending"; checkedAt: string }
-  | {
-      companyId: string;
-      status: "ok" | "none" | "error";
-      amountDue?: number;     // en centimes
-      currency?: string;      // "EUR"...
-      resultUrl?: string;     // <- URL de la page résultat
-      payUrl?: string;        // <- URL exacte du bouton Payer
-      message?: string;
-      checkedAt: string;
-    };
+  | { companyId: string; status: "ok"; amountDue: number; currency: string; resultUrl?: string; payUrl?: string; message?: string; checkedAt: string }
+  | { companyId: string; status: "none"; checkedAt: string }
+  | { companyId: string; status: "error"; message?: string; checkedAt: string };
+
 /* -------------------- Données -------------------- */
 const companiesCatalog: Company[] = [
   {
@@ -414,10 +408,11 @@ export default function ClientPage() {
               <button className="text-gray-500 hover:text-gray-700" onClick={() => setDetailFor(null)}>✕</button>
             </div>
             <div className="space-y-2 text-sm">
-              <div><span className="text-gray-500">Statut :</span> <strong>{detailFor.status}</strong></div>
-              <div><span className="text-gray-500">Montant :</span> <strong>{formatMoney(detailFor.amountDue, detailFor.currency)}</strong></div>
-              {detailFor.message && <div className="text-gray-500">{detailFor.message}</div>}
-              <div className="text-gray-500">Paiement à effectuer sur la plateforme officielle.</div>
+              <div><span className="text-gray-500">Statut :</span> <strong>{detailFor?.status ?? "-"}</strong></div>
+<div><span className="text-gray-500">Montant :</span> <strong>{formatMoney(detailFor?.amountDue ?? 0, detailFor?.currency ?? "EUR")}</strong></div>
+{detailFor?.message && <div className="text-gray-500">{detailFor.message}</div>}
+<div className="text-gray-500">Paiement à effectuer sur la plateforme officielle.</div>
+
             </div>
             <div className="mt-4 flex justify-end">
               <button className="px-4 py-2 rounded-lg bg-black text-white hover:bg-black/85" onClick={() => setDetailFor(null)}>
