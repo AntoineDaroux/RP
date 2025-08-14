@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "cross-env PLAYWRIGHT_BROWSERS_PATH=0 npx playwright install --with-deps chromium"
+    "postinstall": "npx playwright install --with-deps chromium"
   },
   "dependencies": {
     "@radix-ui/react-select": "^2.2.5",
