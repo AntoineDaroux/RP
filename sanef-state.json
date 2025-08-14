@@ -1,0 +1,97 @@
+{
+  "cookies": [
+    {
+      "name": "SERVERID",
+      "value": "www1",
+      "domain": "www.sanef.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "__cf_bm",
+      "value": "WMeageI9lrFKK.i2ymHe3YsBrHMoTQg3IwNlVtzOPAE-1754686387-1.0.1.1-UKvwYtWE98r339LQDOQ4QFf.tZFeydcMdrzUWcCPB_WgXNiPxkfjcKFB_SyH8il8gAYUWQv25V1icUqgyqlDk0o71gQbAeZgx3hUSmtz__E",
+      "domain": ".sanef.com",
+      "path": "/",
+      "expires": 1754688186.760946,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "__cfwaitingroom_sanefcom_",
+      "value": "ChhjQjBFY0dqa2RJNHNwU2Vsc2FSajdnPT0SgAJUalgzV2dIcFBGUEV5SHZVOUx1RjJLdXptMGVLeGo5eVYvdHRKRnY2WXhRSkU5MW45d2dTQjI3c3FYUmtFVjdVSGpsM1dkUVBjeFRjVG1tZW9Ubm9jNnpzLzJEZXJLL2ZPRGhRZWtvQUptZWNCaUVTYzZRYU45d2VYM2NiTGhjR0JtK3YyRmZTK2JIZTgzSEsyUW5JYyttekU2UmpRenB2NzZ3eE9GeCtMZjlFb1oyaENGOEJjeUVNL0JaQm5ZZDVhK3RYNDF1cC93d20ranhXTjZjREVtQW5nQllZb3oybE84bitOV2Y5WnJmRERGS1A1UVh2bFNOM0ZIQU8zMEJy",
+      "domain": ".www.sanef.com",
+      "path": "/",
+      "expires": 1754686687.799485,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None",
+      "partitionKey": "https://sanef.com",
+      "_crHasCrossSiteAncestor": false
+    },
+    {
+      "name": "cookies",
+      "value": "!TAC_ADS=true!TAC_GGA=true",
+      "domain": ".sanef.com",
+      "path": "/",
+      "expires": 1786222388,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_gcl_au",
+      "value": "1.1.1703466401.1754686388",
+      "domain": ".sanef.com",
+      "path": "/",
+      "expires": 1762462388,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_ga",
+      "value": "GA1.1.332972688.1754686387",
+      "domain": ".sanef.com",
+      "path": "/",
+      "expires": 1788382388.381817,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "_ga_JGG5SPNFM9",
+      "value": "GS2.1.s1754686387$o1$g0$t1754686388$j60$l0$h0",
+      "domain": ".sanef.com",
+      "path": "/",
+      "expires": 1788382388.389287,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "_ga_VL8MYKLS7Y",
+      "value": "GS2.1.s1754686387$o1$g0$t1754686388$j60$l0$h0",
+      "domain": ".sanef.com",
+      "path": "/",
+      "expires": 1788382388.39409,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "https://www.sanef.com",
+      "localStorage": [
+        {
+          "name": "_gcl_ls",
+          "value": "{\"schema\":\"gcl\",\"version\":1,\"gcl_ctr\":{\"value\":{\"value\":0,\"creationTimeMs\":1754686388379},\"expires\":1762462388379}}"
+        }
+      ]
+    }
+  ]
+}
