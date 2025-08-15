@@ -37,6 +37,67 @@ async function snap(page: Page, filename: string): Promise<string> {
 }
 // --- Helpers complémentaires (recherche dans page + iframes) ---
 
+// --- Cookies: clique partout (page, iframes, shadow DOM), sinon enlève l’overlay ---
+async function acceptAllCookiesEverywhere(page: Page): Promise<void> {
+  // essais directs (page)
+  const direct = [
+    page.getByRole('button', { name: /tout accepter/i }),
+    page.locator('button:has-text("Tout accepter")'),
+    page.locator('#axeptio_btn_acceptAll, [data-ax-accept], [data-testid*="accept-all"]'),
+    page.locator('[id*="accept"][id*="all"]'),
+    // Shadow DOM
+    page.locator('css:light=#axeptio_btn_acceptAll'),
+    page.locator('css:light=button:has-text("Tout accepter")'),
+  ];
+
+  for (const loc of direct) {
+    if (await loc.count()) {
+      try {
+        const btn = loc.first();
+        await btn.scrollIntoViewIfNeeded().catch(() => {});
+        await btn.click({ timeout: 1500, force: true });
+        return;
+      } catch {}
+    }
+  }
+
+  // iframes
+  for (const f of page.frames()) {
+    const inFrame = [
+      f.getByRole('button', { name: /tout accepter/i }),
+      f.locator('button:has-text("Tout accepter")'),
+      f.locator('#axeptio_btn_acceptAll, [data-ax-accept], [data-testid*="accept-all"]'),
+      f.locator('[id*="accept"][id*="all"]'),
+    ];
+    for (const loc of inFrame) {
+      if (await loc.count()) {
+        try { await loc.first().click({ timeout: 1500, force: true }); return; } catch {}
+      }
+    }
+  }
+
+  // bruteforce par coordonnées (si on trouve un noeud texte)
+  try {
+    const el = await page.$('text=/tout accepter/i');
+    const box = el && await el.boundingBox();
+    if (box) {
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      return;
+    }
+  } catch {}
+
+  // dernier recours: on masque l’overlay
+  try {
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => {
+      document
+        .querySelectorAll('[id*=axeptio],[class*="cookie"],[class*="consent"]')
+        .forEach(el => (el as HTMLElement).style.display = 'none');
+      document.body.style.overflow = 'auto';
+      document.body.style.pointerEvents = 'auto';
+    });
+  } catch {}
+}
 
 // Cherche une fois (dans root) avec une liste de sélecteurs "classiques" ET Shadow DOM (css:light)
 async function findPlateInput(root: Page | Frame): Promise<Locator | null> {
@@ -153,27 +214,23 @@ export async function GET(req: NextRequest) {
 
   try {
     // 3) aller sur le panier Sanef
-   // --- après le page.goto(...) ---
-try {
-  await page.waitForLoadState("domcontentloaded", { timeout: 15_000 });
-  try { await page.waitForLoadState("networkidle", { timeout: 5_000 }); } catch {}
-} catch {}
+await page.goto("https://www.sanef.com/client/index.html?lang=fr#basket", {
+  waitUntil: "domcontentloaded",
+  timeout: 90_000,
+});
+await page.setViewportSize({ width: 1280, height: 900 });
 
-// Cookies : clic "Tout accepter" si présent (texte FR + variantes)
-try {
-  const cookieBtn = page
-    .locator(
-      'button:has-text("Tout accepter"), ' +
-      '[data-test-id="accept-all"], ' +
-      '[id*="accept"][id*="all"]'
-    )
-    .first();
-  if (await cookieBtn.count()) {
-    await cookieBtn.click({ timeout: 3_000 }).catch(() => {});
-  }
-} catch {}
+// laisser la page souffler un peu
+try { await page.waitForLoadState("networkidle", { timeout: 5000 }); } catch {}
 
-// Screenshot AVANT (garde-le si ça t’aide au debug)
+// Cookies : essayer partout
+await acceptAllCookiesEverywhere(page);
+
+// (re)stabilisation légère
+try { await page.waitForLoadState("networkidle", { timeout: 3000 }); } catch {}
+await page.waitForTimeout(300);
+
+// Screenshot AVANT
 const beforePath = await snap(page, beforeName);
 
 // ---- TROUVER & REMPLIR LA PLAQUE (page ou iframe) ----
@@ -186,7 +243,6 @@ if (!input) {
     { status: 500 }
   );
 }
-
 await input.scrollIntoViewIfNeeded().catch(() => {});
 await input.click().catch(() => {});
 await input.fill("").catch(() => {});
