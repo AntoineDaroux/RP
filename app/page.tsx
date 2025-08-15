@@ -100,6 +100,7 @@ export default function DevPage() {
   const [results, setResults] = useState<Record<string, SearchResult | undefined>>({});
   const [isSearching, setIsSearching] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [snapToView, setSnapToView] = useState<string | null>(null);
 
   const enabledCompanies = useMemo(() => companies.filter((c) => c.enabled), [companies]);
   const plateValid = useMemo(() => {
@@ -399,12 +400,37 @@ export default function DevPage() {
                             <div>URL : <a className="underline" href={dbg?.requestUrl} target="_blank" rel="noreferrer">{dbg?.requestUrl || "—"}</a></div>
                             {dbg?.message && <div>Message : <span className="text-rose-700">{dbg.message}</span></div>}
                             {dbg?.screenshots && (
-                              <div className="flex gap-3">
-                                {dbg.screenshots.before && <a className="underline" href={dbg.screenshots.before} target="_blank" rel="noreferrer">before</a>}
-                                {dbg.screenshots.after  && <a className="underline" href={dbg.screenshots.after}  target="_blank" rel="noreferrer">after</a>}
-                                {dbg.screenshots.error  && <a className="underline text-rose-700" href={dbg.screenshots.error}  target="_blank" rel="noreferrer">error</a>}
-                              </div>
-                            )}
+  <div className="flex gap-3">
+    {dbg.screenshots.before && (
+      <button
+        type="button"
+        className="underline"
+        onClick={() => setSnapToView(dbg.screenshots!.before!)}
+      >
+        avant
+      </button>
+    )}
+    {dbg.screenshots.after && (
+      <button
+        type="button"
+        className="underline"
+        onClick={() => setSnapToView(dbg.screenshots!.after!)}
+      >
+        après
+      </button>
+    )}
+    {dbg.screenshots.error && (
+      <button
+        type="button"
+        className="underline text-rose-700"
+        onClick={() => setSnapToView(dbg.screenshots!.error!)}
+      >
+        erreur
+      </button>
+    )}
+  </div>
+)}
+
                             <pre className="bg-gray-50 rounded p-2 overflow-auto">{JSON.stringify(dbg?.raw ?? {}, null, 2)}</pre>
                           </div>
                         </details>
@@ -435,6 +461,33 @@ export default function DevPage() {
           </details>
         </section>
       </main>
+
+{/* Fenêtre d’aperçu pour la capture */}
+{snapToView && (
+  <div
+    className="fixed inset-0 z-50 bg-black/60 grid place-items-center p-4"
+    onClick={() => setSnapToView(null)}
+  >
+    <div
+      className="bg-white rounded-xl p-2 max-w-5xl max-h-[90vh] shadow-xl"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <img
+        src={snapToView}
+        alt="Capture"
+        className="max-h-[85vh] object-contain"
+      />
+      <div className="text-right mt-2">
+        <button
+          className="px-3 py-1 rounded bg-black text-white hover:bg-black/85"
+          onClick={() => setSnapToView(null)}
+        >
+          Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       {/* Styles badges */}
       <style>{`

@@ -3,7 +3,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import type { NextRequest } from "next/server";
-import type { Page } from "playwright-core";
+import type { Page, Frame, Locator } from "playwright-core";
+
 import path from "path";
 import { launchBrowser } from "../_lib/browser";
 
@@ -35,33 +36,54 @@ async function snap(page: Page, filename: string): Promise<string> {
   }
 }
 // --- Helpers complémentaires (recherche dans page + iframes) ---
-import type { Frame, Locator } from "playwright-core";
 
+
+// Cherche une fois (dans root) avec une liste de sélecteurs "classiques" ET Shadow DOM (css:light)
 async function findPlateInput(root: Page | Frame): Promise<Locator | null> {
-  const selectors = [
+  const sels = [
+    // ciblage direct
     'input[placeholder="XX123XX"]',
     'input[placeholder*="XX123" i]',
     '[data-test-id="page-basket-plate-input"] input',
     'input[name*="immatricul" i]',
     'input[name*="plaque" i]',
     'input[name*="plate" i]',
-    'input[type="text"]',
-    'input',
+
+    // Shadow DOM (Playwright): css:light=…
+    'css:light=input[placeholder="XX123XX"]',
+    'css:light=input[placeholder*="XX123" i]',
+    'css:light=[data-test-id="page-basket-plate-input"] input',
+    'css:light=input[name*="immatricul" i]',
+    'css:light=input[name*="plaque" i]',
+    'css:light=input[name*="plate" i]',
+
+    // fallback très large
+    'css:light=input[type="text"]',
+    'css:light=input',
   ];
-  for (const sel of selectors) {
+
+  for (const sel of sels) {
     const loc = root.locator(sel).first();
     try {
-      await loc.waitFor({ state: "visible", timeout: 800 });
+      // on donne un peu de temps au lazy-load
+      await loc.waitFor({ state: "visible", timeout: 1500 });
       return loc;
     } catch {}
   }
   return null;
 }
 
+// Cherche sur la page ET dans toutes les iframes
 async function findPlateInputEverywhere(page: Page): Promise<Locator | null> {
+  // attendre que quelque chose arrive dans le DOM
+  await page.waitForLoadState("domcontentloaded").catch(() => {});
+  try { await page.waitForLoadState("networkidle", { timeout: 5000 }); } catch {}
+
+  // essai direct
   const direct = await findPlateInput(page);
   if (direct) return direct;
 
+  // essai dans les iframes (certaines sont shadow + iframe…)
   for (const frame of page.frames()) {
     const loc = await findPlateInput(frame);
     if (loc) return loc;
@@ -69,29 +91,33 @@ async function findPlateInputEverywhere(page: Page): Promise<Locator | null> {
   return null;
 }
 
+// Clique sur "Vérifier…" (page + iframes + Shadow DOM)
 async function clickSubmitEverywhere(page: Page): Promise<boolean> {
-  const selectors = [
+  const sels = [
     '[data-test-id="page-basket-submit-button"]',
+    'css:light=[data-test-id="page-basket-submit-button"]',
     'button:has-text("Vérifier")',
     'button:has-text("payer")',
     'button:has-text("Rechercher")',
-    'button:visible',
+    'css:light=button:has-text("Vérifier")',
+    'css:light=button:has-text("payer")',
+    'css:light=button:has-text("Rechercher")',
   ];
 
-  // d’abord sur la page
-  for (const sel of selectors) {
+  // page principale
+  for (const sel of sels) {
     const btn = page.locator(sel).first();
     if (await btn.count()) {
-      try { await btn.click({ timeout: 1200 }); return true; } catch {}
+      try { await btn.click({ timeout: 1500 }); return true; } catch {}
     }
   }
 
-  // puis dans les iframes
+  // iframes
   for (const frame of page.frames()) {
-    for (const sel of selectors) {
+    for (const sel of sels) {
       const btn = frame.locator(sel).first();
       if (await btn.count()) {
-        try { await btn.click({ timeout: 1200 }); return true; } catch {}
+        try { await btn.click({ timeout: 1500 }); return true; } catch {}
       }
     }
   }
