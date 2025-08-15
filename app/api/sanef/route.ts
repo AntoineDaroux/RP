@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
     // 3) aller sur le panier Sanef
     await page.goto("https://www.sanef.com/client/index.html?lang=fr#basket", {
       waitUntil: "domcontentloaded",
-      timeout: 60_000,
+      timeout: 90_000,
     });
 
     // (facultatif) Si une protection Cloudflare apparaît, on peut juste attendre un peu :
@@ -78,28 +78,72 @@ export async function GET(req: NextRequest) {
     // 4) capture AVANT
     const beforePath = await snap(page, beforeName);
 
-    // 5) cookies
-    try {
-      await page.getByRole("button", { name: /tout accepter/i }).click({ timeout: 2_500 });
-    } catch {}
+    // 5) cookies – on essaie plusieurs variantes
+try {
+  // Bouton “Tout accepter” (texte FR ou data-test)
+  const cookieBtn = page.locator(
+    'button:has-text("Tout accepter"), ' +
+    '[data-test-id="accept-all"], ' +
+    '[id*="accept"][id*="all"]'
+  ).first();
+  if (await cookieBtn.count()) {
+    await cookieBtn.click({ timeout: 3_000 }).catch(() => {});
+  }
+} catch {}
 
-    // 6) remplir la plaque
-    // d’après l’UI actuelle : placeholder "XX123XX"
-    const input = page.locator('input[placeholder="XX123XX"]').first();
-    await input.waitFor({ state: "visible", timeout: 8_000 });
-    await input.fill(plate);
+// 6) trouver et remplir la plaque (sélecteurs robustes + fallbacks)
+const candidates = [
+  page.getByPlaceholder("XX123XX"),
+  page.locator('[data-test-id="page-basket-plate-input"] input'),
+  page.locator('input[name*="plaque"], input[name*="plate"], input[name*="license"]'),
+  page.locator('input[placeholder*="XX"][placeholder*="123"]'),
+  page.getByRole("textbox")
+];
 
-    // 7) bouton "Vérifier mes péages à payer"
-    await page.locator('[data-test-id="page-basket-submit-button"]').click();
+let input: import("playwright-core").Locator | null = null;
+for (const c of candidates) {
+  const el = c.first();
+  if ((await el.count()) > 0) {
+    input = el;
+    break;
+  }
+}
+if (!input) {
+  throw new Error("Champ plaque introuvable (sélecteurs SANEF).");
+}
 
-    // 8) fermer un éventuel popin "créer/connexion compte"
-    try {
-      await page.locator('[data-test-id="account-modal-cancel-button"]').click({ timeout: 3_000 });
-    } catch {}
+// s'assurer qu'il est à l'écran + visible
+await input.scrollIntoViewIfNeeded().catch(() => {});
+await input.waitFor({ state: "visible", timeout: 20_000 });
 
-    // 9) attendre que l’UI soit stable
-    try { await page.waitForLoadState("networkidle", { timeout: 15_000 }); } catch {}
-    await page.waitForTimeout(1_200);
+// certains placeholders disparaissent, on nettoie puis on remplit
+await input.click({ timeout: 5_000 }).catch(() => {});
+await input.fill("", { timeout: 5_000 }).catch(() => {});
+await input.fill(plate, { timeout: 8_000 }).catch(async () => {
+  // fallback si fill échoue
+  await input.type(plate, { delay: 40 });
+});
+
+// 7) bouton “Vérifier mes péages à payer” – plusieurs sélecteurs
+const submit = page.locator(
+  '[data-test-id="page-basket-submit-button"], ' +
+  'button:has-text("Vérifier"), button:has-text("payer"), button:has-text("Rechercher")'
+).first();
+if ((await submit.count()) === 0) {
+  throw new Error("Bouton de soumission introuvable.");
+}
+await submit.click({ timeout: 10_000 }).catch(() => submit.dispatchEvent("click"));
+
+// 8) fermer un éventuel popin de compte
+try {
+  await page.locator('[data-test-id="account-modal-cancel-button"], button:has-text("Plus tard")')
+    .click({ timeout: 3_000 });
+} catch {}
+
+// 9) attendre la stabilisation réseau/DOM
+try { await page.waitForLoadState("networkidle", { timeout: 20_000 }); } catch {}
+await page.waitForTimeout(1_000);
+
 
     // 10) capture APRÈS
     const afterPath = await snap(page, afterName);
