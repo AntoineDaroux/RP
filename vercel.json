@@ -1,14 +1,8 @@
 {
   "functions": {
-    "app/api/**/route.js": {
+    "app/api/**/route.(ts|js)": {
       "memory": 1024,
-      "maxDuration": 60,
-      "includeFiles": "node_modules/playwright-core/.local-browsers/**"
-    },
-    "app/api/**/route.ts": {
-      "memory": 1024,
-      "maxDuration": 60,
-      "includeFiles": "node_modules/playwright-core/.local-browsers/**"
+      "maxDuration": 60
     }
   }
 }
