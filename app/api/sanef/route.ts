@@ -34,6 +34,69 @@ async function snap(page: Page, filename: string): Promise<string> {
     return `/${filename}`;
   }
 }
+// --- Helpers complémentaires (recherche dans page + iframes) ---
+import type { Frame, Locator } from "playwright-core";
+
+async function findPlateInput(root: Page | Frame): Promise<Locator | null> {
+  const selectors = [
+    'input[placeholder="XX123XX"]',
+    'input[placeholder*="XX123" i]',
+    '[data-test-id="page-basket-plate-input"] input',
+    'input[name*="immatricul" i]',
+    'input[name*="plaque" i]',
+    'input[name*="plate" i]',
+    'input[type="text"]',
+    'input',
+  ];
+  for (const sel of selectors) {
+    const loc = root.locator(sel).first();
+    try {
+      await loc.waitFor({ state: "visible", timeout: 800 });
+      return loc;
+    } catch {}
+  }
+  return null;
+}
+
+async function findPlateInputEverywhere(page: Page): Promise<Locator | null> {
+  const direct = await findPlateInput(page);
+  if (direct) return direct;
+
+  for (const frame of page.frames()) {
+    const loc = await findPlateInput(frame);
+    if (loc) return loc;
+  }
+  return null;
+}
+
+async function clickSubmitEverywhere(page: Page): Promise<boolean> {
+  const selectors = [
+    '[data-test-id="page-basket-submit-button"]',
+    'button:has-text("Vérifier")',
+    'button:has-text("payer")',
+    'button:has-text("Rechercher")',
+    'button:visible',
+  ];
+
+  // d’abord sur la page
+  for (const sel of selectors) {
+    const btn = page.locator(sel).first();
+    if (await btn.count()) {
+      try { await btn.click({ timeout: 1200 }); return true; } catch {}
+    }
+  }
+
+  // puis dans les iframes
+  for (const frame of page.frames()) {
+    for (const sel of selectors) {
+      const btn = frame.locator(sel).first();
+      if (await btn.count()) {
+        try { await btn.click({ timeout: 1200 }); return true; } catch {}
+      }
+    }
+  }
+  return false;
+}
 
 // --- Route handler ---
 
@@ -91,48 +154,33 @@ try {
   }
 } catch {}
 
-// 6) trouver et remplir la plaque (sélecteurs robustes + fallbacks)
-const candidates = [
-  page.getByPlaceholder("XX123XX"),
-  page.locator('[data-test-id="page-basket-plate-input"] input'),
-  page.locator('input[name*="plaque"], input[name*="plate"], input[name*="license"]'),
-  page.locator('input[placeholder*="XX"][placeholder*="123"]'),
-  page.getByRole("textbox")
-];
-
-let input: import("playwright-core").Locator | null = null;
-for (const c of candidates) {
-  const el = c.first();
-  if ((await el.count()) > 0) {
-    input = el;
-    break;
-  }
-}
+// 6) TROUVER & REMPLIR LA PLAQUE (page ou iframe)
+const input = await findPlateInputEverywhere(page);
 if (!input) {
-  throw new Error("Champ plaque introuvable (sélecteurs SANEF).");
+  const errPath = await snap(page, errorName);
+  await context.close(); await browser.close();
+  return Response.json(
+    { ok: false, error: "Champ plaque introuvable (sélecteurs SANEF).", screenshot: errPath },
+    { status: 500 }
+  );
 }
 
-// s'assurer qu'il est à l'écran + visible
 await input.scrollIntoViewIfNeeded().catch(() => {});
-await input.waitFor({ state: "visible", timeout: 20_000 });
+await input.click().catch(() => {});
+await input.fill("").catch(() => {});
+await input.type(plate, { delay: 40 });
 
-// certains placeholders disparaissent, on nettoie puis on remplit
-await input.click({ timeout: 5_000 }).catch(() => {});
-await input.fill("", { timeout: 5_000 }).catch(() => {});
-await input.fill(plate, { timeout: 8_000 }).catch(async () => {
-  // fallback si fill échoue
-  await input.type(plate, { delay: 40 });
-});
-
-// 7) bouton “Vérifier mes péages à payer” – plusieurs sélecteurs
-const submit = page.locator(
-  '[data-test-id="page-basket-submit-button"], ' +
-  'button:has-text("Vérifier"), button:has-text("payer"), button:has-text("Rechercher")'
-).first();
-if ((await submit.count()) === 0) {
-  throw new Error("Bouton de soumission introuvable.");
+// 7) CLIQUER SUR “Vérifier…” (page ou iframe)
+const clicked = await clickSubmitEverywhere(page);
+if (!clicked) {
+  const errPath = await snap(page, errorName);
+  await context.close(); await browser.close();
+  return Response.json(
+    { ok: false, error: "Bouton de validation introuvable.", screenshot: errPath },
+    { status: 500 }
+  );
 }
-await submit.click({ timeout: 10_000 }).catch(() => submit.dispatchEvent("click"));
+
 
 // 8) fermer un éventuel popin de compte
 try {
