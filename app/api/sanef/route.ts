@@ -153,34 +153,30 @@ export async function GET(req: NextRequest) {
 
   try {
     // 3) aller sur le panier Sanef
-    await page.goto("https://www.sanef.com/client/index.html?lang=fr#basket", {
-      waitUntil: "domcontentloaded",
-      timeout: 90_000,
-    });
-
-    // (facultatif) Si une protection Cloudflare apparaît, on peut juste attendre un peu :
-    try {
-      // si la page met du temps à stabiliser, on laisse respirer
-      await page.waitForLoadState("networkidle", { timeout: 5_000 });
-    } catch {}
-
-    // 4) capture AVANT
-    const beforePath = await snap(page, beforeName);
-
-    // 5) cookies – on essaie plusieurs variantes
+   // --- après le page.goto(...) ---
 try {
-  // Bouton “Tout accepter” (texte FR ou data-test)
-  const cookieBtn = page.locator(
-    'button:has-text("Tout accepter"), ' +
-    '[data-test-id="accept-all"], ' +
-    '[id*="accept"][id*="all"]'
-  ).first();
+  await page.waitForLoadState("domcontentloaded", { timeout: 15_000 });
+  try { await page.waitForLoadState("networkidle", { timeout: 5_000 }); } catch {}
+} catch {}
+
+// Cookies : clic "Tout accepter" si présent (texte FR + variantes)
+try {
+  const cookieBtn = page
+    .locator(
+      'button:has-text("Tout accepter"), ' +
+      '[data-test-id="accept-all"], ' +
+      '[id*="accept"][id*="all"]'
+    )
+    .first();
   if (await cookieBtn.count()) {
     await cookieBtn.click({ timeout: 3_000 }).catch(() => {});
   }
 } catch {}
 
-// 6) TROUVER & REMPLIR LA PLAQUE (page ou iframe)
+// Screenshot AVANT (garde-le si ça t’aide au debug)
+const beforePath = await snap(page, beforeName);
+
+// ---- TROUVER & REMPLIR LA PLAQUE (page ou iframe) ----
 const input = await findPlateInputEverywhere(page);
 if (!input) {
   const errPath = await snap(page, errorName);
@@ -196,7 +192,7 @@ await input.click().catch(() => {});
 await input.fill("").catch(() => {});
 await input.type(plate, { delay: 40 });
 
-// 7) CLIQUER SUR “Vérifier…” (page ou iframe)
+// ---- CLIQUER SUR “Vérifier mes péages à payer” ----
 const clicked = await clickSubmitEverywhere(page);
 if (!clicked) {
   const errPath = await snap(page, errorName);
@@ -207,20 +203,19 @@ if (!clicked) {
   );
 }
 
-
-// 8) fermer un éventuel popin de compte
+// Fermer un éventuel popin de compte
 try {
-  await page.locator('[data-test-id="account-modal-cancel-button"], button:has-text("Plus tard")')
+  await page
+    .locator('[data-test-id="account-modal-cancel-button"], button:has-text("Plus tard")')
     .click({ timeout: 3_000 });
 } catch {}
 
-// 9) attendre la stabilisation réseau/DOM
+// Laisser l’UI se stabiliser un peu
 try { await page.waitForLoadState("networkidle", { timeout: 20_000 }); } catch {}
 await page.waitForTimeout(1_000);
 
-
-    // 10) capture APRÈS
-    const afterPath = await snap(page, afterName);
+// Screenshot APRÈS
+const afterPath = await snap(page, afterName);
 
     await context.close();
     await browser.close();
